@@ -3,6 +3,8 @@
 //
 
 #include <fstream>
+#include <thread>
+#include <mutex>
 #include "Scene.hpp"
 #include "Renderer.hpp"
 
@@ -21,26 +23,63 @@ void Renderer::Render(const Scene& scene)
     float scale = tan(deg2rad(scene.fov * 0.5));
     float imageAspectRatio = scene.width / (float)scene.height;
     Vector3f eye_pos(278, 273, -800);
-    int m = 0;
 
     // change the spp value to change sample ammount
     int spp = 16;
     std::cout << "SPP: " << spp << "\n";
-    for (uint32_t j = 0; j < scene.height; ++j) {
-#pragma omp parallel for
-        for (uint32_t i = 0; i < scene.width; ++i) {
-            // generate primary ray direction
-            float x = (2 * (i + 0.5) / (float)scene.width - 1) *
-                      imageAspectRatio * scale;
-            float y = (1 - 2 * (j + 0.5) / (float)scene.height) * scale;
+    
+    // int m = 0;
+    // for (uint32_t j = 0; j < scene.height; ++j) {
+    //     for (uint32_t i = 0; i < scene.width; ++i) {
+    //         // generate primary ray direction
+    //         float x = (2 * (i + 0.5) / (float)scene.width - 1) *
+    //                   imageAspectRatio * scale;
+    //         float y = (1 - 2 * (j + 0.5) / (float)scene.height) * scale;
 
-            Vector3f dir = normalize(Vector3f(-x, y, 1));
-            for (int k = 0; k < spp; k++){
-                framebuffer[m] += scene.castRay(Ray(eye_pos, dir), 0) / spp;  
+    //         Vector3f dir = normalize(Vector3f(-x, y, 1));
+    //         for (int k = 0; k < spp; k++){
+    //             framebuffer[m] += scene.castRay(Ray(eye_pos, dir), 0) / spp;  
+    //         }
+    //         m++;
+    //     }
+    //     UpdateProgress(j / (float)scene.height);
+    // }
+    // UpdateProgress(1.f);
+
+    std::atomic_int process = 0;
+    std::mutex mtx;
+    const int thred = 20;
+    int times = scene.height / thred;
+    std::thread pool[thred];
+    auto castRayMultiThread = [&](uint32_t y_min, uint32_t y_max)
+    {
+        int m = y_min * scene.width;
+        for (uint32_t j = y_min; j < y_max; ++j) {
+            for (uint32_t i = 0; i < scene.width; ++i) {
+                // generate primary ray direction
+                float x = (2 * (i + 0.5) / (float)scene.width - 1) *
+                        imageAspectRatio * scale;
+                float y = (1 - 2 * (j + 0.5) / (float)scene.height) * scale;
+
+                Vector3f dir = normalize(Vector3f(-x, y, 1));
+                for (int k = 0; k < spp; k++){
+                    framebuffer[m] += scene.castRay(Ray(eye_pos, dir), 0) / spp;  
+                }
+                m++;
             }
-            m++;
+            process++;
+            mtx.lock();
+            UpdateProgress(1.0*process/scene.height);
+            mtx.unlock();
         }
-        UpdateProgress(j / (float)scene.height);
+    };
+    for(int i=0;i<thred;i++)
+    {
+        pool[i] = std::thread(castRayMultiThread, i*times, (i+1)*times);
+    }
+    for(int i=0;i<thred;i++)
+    {
+        pool[i].join();
     }
     UpdateProgress(1.f);
 

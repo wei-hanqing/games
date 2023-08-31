@@ -82,7 +82,7 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
         Ray px(hitPoint, normalize(inter.coords - hitPoint)); 
         Intersection tmp_point = intersect(px);
         float dis = (hitPoint-inter.coords).norm();
-        if(tmp_point.happened && (abs(dis-tmp_point.distance) < 5.0*EPSILON))
+        if(tmp_point.happened && (abs(dis-tmp_point.distance) < 100.0*EPSILON))
         {
             L_dir = inter.emit * m->eval(ray.direction, px.direction, N) * dotProduct(px.direction, N) 
                     * dotProduct(-px.direction, normalize(inter.normal)) / (dis*dis) / pdf_light;
