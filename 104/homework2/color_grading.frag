@@ -29,8 +29,8 @@ void main()
     uv.x /= float(lut_tex_size.x);
     highp vec3 color_sampled_r = texture(color_grading_lut_texture_sampler, uv).rgb;
 
-    color.r = mix(color_sampled_l.r, color_sampled_r.r, fract(color.r * _COLORS));
-    color.g = mix(color_sampled_l.g, color_sampled_r.g, fract(color.g * _COLORS));
+    color.r = mix(color_sampled_l.r, color_sampled_r.r, fract(color.b * _COLORS));
+    color.g = mix(color_sampled_l.g, color_sampled_r.g, fract(color.b * _COLORS));
     color.b = mix(color_sampled_l.b, color_sampled_r.b, fract(color.b * _COLORS));
 
     out_color = color;

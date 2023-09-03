@@ -85,7 +85,10 @@ namespace Pilot
             horizontal_displacement.length(), 
             hits))
         {
-            final_position += hits[0].hit_distance * horizontal_direction;
+            // final_position += hits[0].hit_distance * horizontal_direction;
+            // when hit, final vector is project vector of horizontal_displacement at wall plane 
+            Vector3 hit_n = hits[0].hit_normal;
+            final_position += horizontal_displacement - (hit_n.dotProduct(horizontal_displacement)/hit_n.length())*hit_n.normalisedCopy();
         }
         else
         {
